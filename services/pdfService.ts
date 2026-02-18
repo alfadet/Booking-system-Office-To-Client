@@ -1,8 +1,7 @@
 
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
-import { QuoteData } from '../types';
-import { CONTACT_INFO, LEGAL_TEXT, PRICING, OFFER_LEGAL_TEXT } from '../constants';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { OFFER_LEGAL_TEXT } from '../constants';
 
 export const generateQuotePDF = (data: any): void => {
   const doc = new jsPDF();
@@ -56,7 +55,7 @@ export const generateQuotePDF = (data: any): void => {
   doc.text('CONFIGURAZIONE SERVIZIO', 20, cursorY);
   cursorY += 5;
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: cursorY,
     body: [
       ['Evento', data.service.eventName || 'Richiesta Standard'],
@@ -105,7 +104,7 @@ export const generateQuotePDF = (data: any): void => {
 
   economicBody.push([{ content: 'TOTALE FINALE IVATO', styles: { fontStyle: 'bold', fontSize: 11, fillColor: [212, 175, 55], textColor: [0, 0, 0] } }, { content: `€ ${data.total.toFixed(2)}`, styles: { fontStyle: 'bold', fontSize: 11, fillColor: [212, 175, 55], textColor: [0, 0, 0] } }]);
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: cursorY,
     body: economicBody,
     theme: 'grid',
@@ -131,7 +130,7 @@ export const generateQuotePDF = (data: any): void => {
   doc.text(splitTerms, 20, 30);
 
   // Footer
-  const pageCount = (doc as any).internal.getNumberOfPages();
+  const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     const footerY = doc.internal.pageSize.getHeight() - 10;
