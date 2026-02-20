@@ -53,7 +53,7 @@ const App: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
     location: '',
     startTime: '18:00',
-    endTime: '23:00',
+    endTime: '01:00',
     securityOperators: 1,
     fireOperators: 0,
     hasSupervisor: false,
@@ -108,7 +108,7 @@ const App: React.FC = () => {
     if (h === 0) h = 24;
     
     const totalOps = service.securityOperators + service.fireOperators;
-    const minGrant = h === 7 ? 185 : PRICING.MINIMUM_PER_OPERATOR;
+    const minGrant = PRICING.MINIMUM_PER_OPERATOR;
     
     const secSingleTotal = Math.max(h * PRICING.SECURITY_OPERATOR_HOURLY, minGrant);
     const secTotal = secSingleTotal * service.securityOperators;
@@ -636,13 +636,19 @@ const App: React.FC = () => {
           <div className="absolute top-0 right-0 p-10 opacity-[0.05] pointer-events-none">
              <Flame className="w-32 h-32 text-red-500" />
           </div>
-          <div className="relative z-10">
-            <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1 italic">Preventivo Ivato</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-[14px] text-slate-500 font-black">€</span>
-              <span className="text-5xl font-black italic text-white gold-text-elite tracking-tighter">
-                {calculations.totalInclVat.toFixed(2)}
-              </span>
+          <div className="relative z-10 space-y-3">
+            <div>
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Imponibile</p>
+              <p className="text-lg font-black text-white/70 italic tracking-tighter">€ {calculations.totalExclVat.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-red-500 uppercase tracking-widest italic">Totale Ivato</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[12px] text-slate-500 font-black">€</span>
+                <span className="text-4xl font-black italic text-white gold-text-elite tracking-tighter">
+                  {calculations.totalInclVat.toFixed(2)}
+                </span>
+              </div>
             </div>
           </div>
           <div className="text-right relative z-10">

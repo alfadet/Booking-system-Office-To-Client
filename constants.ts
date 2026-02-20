@@ -5,7 +5,7 @@ export const PRICING = {
   SUPERVISOR_FLAT_FEE: 25.00,
   TRANSPORT_FEE_BASE: 30.00,
   VAT_RATE: 0.22,
-  MINIMUM_PER_OPERATOR: 175.00
+  MINIMUM_PER_OPERATOR: 185.00
 };
 
 export const CONTACT_INFO = {
@@ -53,7 +53,7 @@ INFORMAZIONI IMPORTANTI
 1️⃣ Prolungamento servizio
 Se il servizio si estende oltre l’orario concordato:
 • Maggiorazione di €25/ora per ogni operatore presente
-• Durata standard massima: 8 ore
+• Durata standard massima: 7 ore
 • Le ore successive sono considerate straordinario
 
 2️⃣ Annullamento o rinvio servizio

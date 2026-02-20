@@ -70,7 +70,7 @@ export const generateQuotePDF = (data: any): void => {
     theme: 'striped',
     styles: { fontSize: 8, cellPadding: 3 },
     margin: { left: 20, right: 20 },
-    columnStyles: { 0: { fontStyle: 'bold', width: 50 } }
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } }
   });
 
   cursorY = (doc as any).lastAutoTable.finalY + 15;
@@ -130,7 +130,7 @@ export const generateQuotePDF = (data: any): void => {
   doc.text(splitTerms, 20, 30);
 
   // Footer
-  const pageCount = doc.internal.getNumberOfPages();
+  const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     const footerY = doc.internal.pageSize.getHeight() - 10;
