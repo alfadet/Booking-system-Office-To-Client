@@ -102,16 +102,12 @@ const App: React.FC = () => {
 
   const [payment, setPayment] = useState<PaymentOption>(PaymentOption.BANK_TRANSFER);
 
-  // Carica cronologia (File di Log 'preventivi inviati')
+  // Carica cronologia dal database
   useEffect(() => {
-    const saved = localStorage.getItem('preventivi_inviati');
-    if (saved) {
-      try {
-        setQuoteHistory(JSON.parse(saved));
-      } catch (e) {
-        console.error("Errore caricamento log preventivi", e);
-      }
-    }
+    fetch('/api/quotes')
+      .then(r => r.json())
+      .then(data => setQuoteHistory(data))
+      .catch(e => console.error("Errore caricamento preventivi", e));
   }, []);
 
   // Logica automatica Capo Squadra (minimo 4 operatori totali)
@@ -175,7 +171,7 @@ const App: React.FC = () => {
   /**
    * Salva il preventivo corrente nel File di Log 'preventivi inviati'
    */
-  const saveToHistory = () => {
+  const saveToHistory = async () => {
     const newEntry = {
       id: quoteId,
       timestamp: new Date().toISOString(),
@@ -188,7 +184,13 @@ const App: React.FC = () => {
 
     const updatedHistory = [newEntry, ...quoteHistory.filter(q => q.id !== quoteId)].slice(0, 100);
     setQuoteHistory(updatedHistory);
-    localStorage.setItem('preventivi_inviati', JSON.stringify(updatedHistory));
+    try {
+      await fetch('/api/quotes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newEntry),
+      });
+    } catch (e) { console.error("Errore salvataggio preventivo", e); }
   };
 
   const getDynamicFileName = (c: ClientDetails = client, id: string = quoteId) => {
@@ -410,10 +412,13 @@ const App: React.FC = () => {
     };
     setSelectedQuote(updated);
     
-    // Aggiorna anche nel log se si desidera persistere
     const updatedHistory = quoteHistory.map(q => q.id === updated.id ? updated : q);
     setQuoteHistory(updatedHistory);
-    localStorage.setItem('preventivi_inviati', JSON.stringify(updatedHistory));
+    fetch(`/api/quotes/${updated.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ discount: perc, calculations: updated.calculations, total: updated.total }),
+    }).catch(e => console.error("Errore aggiornamento sconto", e));
     
     alert(`Sconto del ${perc}% applicato con successo.`);
   };
