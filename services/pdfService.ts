@@ -15,6 +15,11 @@ export const generateQuotePDF = (data: any): void => {
   doc.setLineWidth(1.5);
   doc.line(0, 55, pageWidth, 55);
 
+  // Rimuove emoji che causano problemi di rendering nel PDF
+  const stripEmojis = (text: string) => {
+    return text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDDFF])/g, '');
+  };
+
   // Logo Text
   doc.setTextColor(212, 175, 55);
   doc.setFontSize(32);
@@ -43,10 +48,10 @@ export const generateQuotePDF = (data: any): void => {
   doc.text('DETTAGLI CLIENTE', 20, cursorY);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.text(`Nome: ${data.client.firstName} ${data.client.lastName}`, 20, cursorY + 7);
-  if (data.client.companyName) doc.text(`Azienda: ${data.client.companyName}`, 20, cursorY + 12);
-  doc.text(`Email: ${data.client.email}`, 20, cursorY + 17);
-  doc.text(`Tel: ${data.client.phone}`, 20, cursorY + 22);
+  doc.text(`Nome: ${stripEmojis(data.client.firstName)} ${stripEmojis(data.client.lastName)}`, 20, cursorY + 7);
+  if (data.client.companyName) doc.text(`Azienda: ${stripEmojis(data.client.companyName)}`, 20, cursorY + 12);
+  doc.text(`Email: ${stripEmojis(data.client.email)}`, 20, cursorY + 17);
+  doc.text(`Tel: ${stripEmojis(data.client.phone)}`, 20, cursorY + 22);
   cursorY += 35;
 
   // DETTAGLI SERVIZIO
@@ -58,14 +63,14 @@ export const generateQuotePDF = (data: any): void => {
   autoTable(doc, {
     startY: cursorY,
     body: [
-      ['Evento', data.service.eventName || 'Richiesta Standard'],
+      ['Evento', stripEmojis(data.service.eventName || 'Richiesta Standard')],
       ['Data Intervento', data.service.date.split('-').reverse().join('/')],
-      ['Luogo', data.service.location || 'Da definire'],
+      ['Luogo', stripEmojis(data.service.location || 'Da definire')],
       ['Orario', `${data.service.startTime} - ${data.service.endTime} (${data.calculations.hours.toFixed(1)} ore)`],
       ['Personale Security', `${data.service.securityOperators} unità`],
       ['Personale Safety', data.service.fireOperators > 0 ? `${data.service.fireOperators} unità` : 'N/A'],
       ['Divisa', data.service.uniformType === 'Security' ? 'Divisa Ufficiale' : 'Abito Elegante'],
-      ['Note', data.service.notes || '-']
+      ['Note', stripEmojis(data.service.notes || '-')]
     ],
     theme: 'striped',
     styles: { fontSize: 8, cellPadding: 3 },
@@ -125,7 +130,8 @@ export const generateQuotePDF = (data: any): void => {
   doc.setTextColor(60, 60, 60);
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
-  const termsText = OFFER_LEGAL_TEXT;
+  
+  const termsText = stripEmojis(OFFER_LEGAL_TEXT);
   const splitTerms = doc.splitTextToSize(termsText, pageWidth - 40);
   doc.text(splitTerms, 20, 30);
 
