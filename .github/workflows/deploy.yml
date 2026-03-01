@@ -1,0 +1,21 @@
+name: Deploy su VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy sul VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 72.62.154.189
+          username: root
+          password: ${{ secrets.VPS_PASSWORD }}
+          script: |
+            cd /root/preventivi
+            git pull
+            docker compose up -d --build
