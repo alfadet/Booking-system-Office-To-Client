@@ -296,8 +296,8 @@ const App: React.FC = () => {
     return text;
   };
 
-  const handleWhatsAppSubmit = () => {
-    saveToHistory();
+  const handleWhatsAppSubmit = async () => {
+    await saveToHistory();
     const msg = generateReportText();
     let phone = client.phone.replace(/\D/g, '');
     if (phone.length === 10 && phone.startsWith('3')) {
@@ -306,15 +306,15 @@ const App: React.FC = () => {
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  const handleEmailSubmit = () => {
-    saveToHistory();
+  const handleEmailSubmit = async () => {
+    await saveToHistory();
     const msg = generateReportText(service, client, payment, calculations, currentQuoteId, true);
     const subject = `Preventivo Alfa Security - ${currentQuoteId} - ${service.eventName || 'Richiesta Servizio'}`;
     window.location.href = `mailto:${client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}`;
   };
 
-  const handleCreatePDFMain = () => {
-    saveToHistory();
+  const handleCreatePDFMain = async () => {
+    await saveToHistory();
     const data = {
       id: currentQuoteId,
       service,
@@ -327,7 +327,7 @@ const App: React.FC = () => {
   };
 
   const handleDirectUploadToDrive = async () => {
-    saveToHistory();
+    await saveToHistory();
     const scriptUrl = 'https://script.google.com/macros/s/AKfycbyWyugxJ55B2rQP8yQOZRW14TrK6DnIlq8aRW0W79A/exec';
     const driveFolderUrl = 'https://drive.google.com/drive/folders/1o1s1GN7HY6JQyr--l2Hb5MtHrW9gs0Sc?usp=drive_link';
     const content = generateReportText(service, client, payment, calculations, currentQuoteId, true);
@@ -358,8 +358,8 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSaveToDriveManual = () => {
-    saveToHistory();
+  const handleSaveToDriveManual = async () => {
+    await saveToHistory();
     const content = generateReportText(service, client, payment, calculations, currentQuoteId, true);
     const fileName = getDynamicFileName();
     
