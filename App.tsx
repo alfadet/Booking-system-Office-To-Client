@@ -674,7 +674,7 @@ const App: React.FC = () => {
           <div className="absolute top-1/2 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
           <div className="relative inline-block px-10">
             <h1 className="text-5xl sm:text-7xl font-black italic text-white title-stroke tracking-tighter uppercase leading-none drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">ALFA SECURITY</h1>
-            <p className="text-[12px] text-emerald-400 font-black tracking-[0.6em] mt-5 uppercase opacity-90">Office Portal V.1.0 • Professional Excellence</p>
+            <p className="text-[12px] text-emerald-400 font-black tracking-[0.6em] mt-5 uppercase opacity-90">Professional Workstation V.1.1</p>
           </div>
         </header>
 
