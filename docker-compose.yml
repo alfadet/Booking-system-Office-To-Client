@@ -1,6 +1,35 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: preventividb
+      POSTGRES_USER: preventiviuser
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U preventiviuser -d preventividb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://preventiviuser:${DB_PASSWORD}@db:5432/preventividb
+      PORT: 3001
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   frontend:
     build: .
     ports:
       - "8080:80"
+    depends_on:
+      - backend
     restart: unless-stopped
+
+volumes:
+  postgres_data:

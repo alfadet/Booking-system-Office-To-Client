@@ -142,14 +142,15 @@ const App: React.FC = () => {
 
   const [payment, setPayment] = useState<PaymentOption>(PaymentOption.BANK_TRANSFER);
 
-  // Carica cronologia (File di Log 'preventivi inviati')
+  // Carica cronologia dal database
   useEffect(() => {
-    const saved = localStorage.getItem('preventivi_inviati');
-    if (saved) {
-      try {
-        setQuoteHistory(JSON.parse(saved));
-      } catch (e) {
-        console.error("Errore caricamento log preventivi", e);
+    fetch('/api/quotes')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setQuoteHistory(data);
+      })
+      .catch(e => {
+        console.error("Errore caricamento preventivi", e);
       }
     }
   }, []);
@@ -209,7 +210,7 @@ const App: React.FC = () => {
   /**
    * Salva il preventivo corrente nel File di Log 'preventivi inviati'
    */
-  const saveToHistory = () => {
+  const saveToHistory = async () => {
     const newEntry = {
       id: currentQuoteId,
       timestamp: new Date().toISOString(),
@@ -222,7 +223,15 @@ const App: React.FC = () => {
 
     const updatedHistory = [newEntry, ...quoteHistory.filter(q => q.id !== currentQuoteId)].slice(0, 100);
     setQuoteHistory(updatedHistory);
-    localStorage.setItem('preventivi_inviati', JSON.stringify(updatedHistory));
+    try {
+      await fetch('/api/quotes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newEntry)
+      });
+    } catch (e) {
+      console.error('Errore salvataggio preventivo', e);
+    }
   };
 
   const getDynamicFileName = (c: ClientDetails = client, id: string = currentQuoteId) => {
@@ -409,13 +418,17 @@ const App: React.FC = () => {
     else if (step === Step.FINAL_PREVIEW) setStep(Step.PAYMENT_SUMMARY);
   };
 
-  const deleteFromHistory = (id: string) => {
+  const deleteFromHistory = async (id: string) => {
     if (window.confirm("Sei sicuro di voler eliminare questo preventivo dall'archivio?")) {
       const updatedHistory = quoteHistory.filter(q => q.id !== id);
       setQuoteHistory(updatedHistory);
-      localStorage.setItem('preventivi_inviati', JSON.stringify(updatedHistory));
       if (selectedQuote && selectedQuote.id === id) {
         setSelectedQuote(null);
+      }
+      try {
+        await fetch(`/api/quotes/${id}`, { method: 'DELETE' });
+      } catch (e) {
+        console.error('Errore eliminazione preventivo', e);
       }
     }
   };
@@ -434,7 +447,7 @@ const App: React.FC = () => {
     );
   }, [quoteHistory, searchQuery]);
 
-  const handleApplyDiscountToSelected = () => {
+  const handleApplyDiscountToSelected = async () => {
     if (!selectedQuote) return;
     const perc = parseFloat(discountInput) || 0;
     const preDiscountTotal = selectedQuote.calculations.totalExclVat + selectedQuote.calculations.vatAmount;
@@ -453,10 +466,17 @@ const App: React.FC = () => {
     };
     setSelectedQuote(updated);
     
-    // Aggiorna anche nel log se si desidera persistere
     const updatedHistory = quoteHistory.map(q => q.id === updated.id ? updated : q);
     setQuoteHistory(updatedHistory);
-    localStorage.setItem('preventivi_inviati', JSON.stringify(updatedHistory));
+    try {
+      await fetch(`/api/quotes/${updated.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+    } catch (e) {
+      console.error('Errore aggiornamento sconto', e);
+    }
     
     alert(`Sconto del ${perc}% applicato con successo.`);
   };
