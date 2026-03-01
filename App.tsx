@@ -151,8 +151,7 @@ const App: React.FC = () => {
       })
       .catch(e => {
         console.error("Errore caricamento preventivi", e);
-      }
-    }
+      });
   }, []);
 
   // Logica automatica Capo Squadra (minimo 4 operatori totali)
