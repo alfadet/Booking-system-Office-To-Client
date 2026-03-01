@@ -41,12 +41,52 @@ const App: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [finalSearchQuery, setFinalSearchQuery] = useState('');
   const [quoteHistory, setQuoteHistory] = useState<any[]>([]);
   const [discountInput, setDiscountInput] = useState<string>('0');
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
+  const [currentQuoteId, setCurrentQuoteId] = useState<string>('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const generateNewId = () => {
+    const datePart = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const randPart = Math.floor(1000 + Math.random() * 9000);
+    return `AS-${datePart}-${randPart}`;
+  };
+
+  // Genera ID iniziale
+  useEffect(() => {
+    setCurrentQuoteId(generateNewId());
+  }, []);
+
+  const resetConfiguration = () => {
+    setAppliedDiscount(0);
+    setDiscountInput('0');
+    setStep(Step.SERVICE_DETAILS);
+    setCurrentQuoteId(generateNewId());
+    setService({
+      eventName: '',
+      date: new Date().toISOString().split('T')[0],
+      location: '',
+      startTime: '18:00',
+      endTime: '01:00',
+      securityOperators: 0,
+      fireOperators: 0,
+      hasSupervisor: false,
+      isOutsideTrento: false,
+      notes: '',
+      uniformType: 'Security'
+    });
+    setClient({
+      firstName: '',
+      lastName: '',
+      phone: '',
+      email: '',
+      companyName: '',
+      vatNumber: '',
+      billingCode: '',
+    });
+  };
 
   const playClickSound = () => {
     try {
@@ -102,12 +142,16 @@ const App: React.FC = () => {
 
   const [payment, setPayment] = useState<PaymentOption>(PaymentOption.BANK_TRANSFER);
 
-  // Carica cronologia dal database
+  // Carica cronologia (File di Log 'preventivi inviati')
   useEffect(() => {
-    fetch('/api/quotes')
-      .then(r => r.json())
-      .then(data => setQuoteHistory(data))
-      .catch(e => console.error("Errore caricamento preventivi", e));
+    const saved = localStorage.getItem('preventivi_inviati');
+    if (saved) {
+      try {
+        setQuoteHistory(JSON.parse(saved));
+      } catch (e) {
+        console.error("Errore caricamento log preventivi", e);
+      }
+    }
   }, []);
 
   // Logica automatica Capo Squadra (minimo 4 operatori totali)
@@ -117,12 +161,6 @@ const App: React.FC = () => {
       setService(s => ({ ...s, hasSupervisor: true }));
     }
   }, [service.securityOperators, service.fireOperators]);
-
-  const quoteId = useMemo(() => {
-    const datePart = new Date().toISOString().split('T')[0].replace(/-/g, '');
-    const randPart = Math.floor(1000 + Math.random() * 9000);
-    return `AS-${datePart}-${randPart}`;
-  }, []);
 
   const calculations = useMemo(() => {
     const [sH, sM] = service.startTime.split(':').map(Number);
@@ -171,9 +209,9 @@ const App: React.FC = () => {
   /**
    * Salva il preventivo corrente nel File di Log 'preventivi inviati'
    */
-  const saveToHistory = async () => {
+  const saveToHistory = () => {
     const newEntry = {
-      id: quoteId,
+      id: currentQuoteId,
       timestamp: new Date().toISOString(),
       service: { ...service },
       client: { ...client },
@@ -182,18 +220,12 @@ const App: React.FC = () => {
       calculations: { ...calculations }
     };
 
-    const updatedHistory = [newEntry, ...quoteHistory.filter(q => q.id !== quoteId)].slice(0, 100);
+    const updatedHistory = [newEntry, ...quoteHistory.filter(q => q.id !== currentQuoteId)].slice(0, 100);
     setQuoteHistory(updatedHistory);
-    try {
-      await fetch('/api/quotes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newEntry),
-      });
-    } catch (e) { console.error("Errore salvataggio preventivo", e); }
+    localStorage.setItem('preventivi_inviati', JSON.stringify(updatedHistory));
   };
 
-  const getDynamicFileName = (c: ClientDetails = client, id: string = quoteId) => {
+  const getDynamicFileName = (c: ClientDetails = client, id: string = currentQuoteId) => {
     const parts = [
       'ALFA_SECURITY',
       c.firstName,
@@ -205,7 +237,7 @@ const App: React.FC = () => {
     return parts.join('_').toUpperCase().replace(/\s+/g, '_') + '.txt';
   };
 
-  const generateReportText = (s: ServiceDetails = service, c: ClientDetails = client, p: PaymentOption = payment, calc: any = calculations, id: string = quoteId, includeExtendedTerms: boolean = false) => {
+  const generateReportText = (s: ServiceDetails = service, c: ClientDetails = client, p: PaymentOption = payment, calc: any = calculations, id: string = currentQuoteId, includeExtendedTerms: boolean = false) => {
     const d = s.date.split('-').reverse().join('/');
     const locationStatus = s.isOutsideTrento ? 'Extra-Urbano' : 'Urbano (Trento)';
     
@@ -268,14 +300,15 @@ const App: React.FC = () => {
 
   const handleEmailSubmit = () => {
     saveToHistory();
-    const msg = generateReportText(service, client, payment, calculations, quoteId, true);
-    const subject = `Preventivo Alfa Security - ${quoteId} - ${service.eventName || 'Richiesta Servizio'}`;
+    const msg = generateReportText(service, client, payment, calculations, currentQuoteId, true);
+    const subject = `Preventivo Alfa Security - ${currentQuoteId} - ${service.eventName || 'Richiesta Servizio'}`;
     window.location.href = `mailto:${client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}`;
   };
 
   const handleCreatePDFMain = () => {
+    saveToHistory();
     const data = {
-      id: quoteId,
+      id: currentQuoteId,
       service,
       client,
       payment,
@@ -289,7 +322,7 @@ const App: React.FC = () => {
     saveToHistory();
     const scriptUrl = 'https://script.google.com/macros/s/AKfycbyWyugxJ55B2rQP8yQOZRW14TrK6DnIlq8aRW0W79A/exec';
     const driveFolderUrl = 'https://drive.google.com/drive/folders/1o1s1GN7HY6JQyr--l2Hb5MtHrW9gs0Sc?usp=drive_link';
-    const content = generateReportText(service, client, payment, calculations, quoteId, true);
+    const content = generateReportText(service, client, payment, calculations, currentQuoteId, true);
     const fileName = getDynamicFileName();
 
     setIsUploading(true);
@@ -319,7 +352,7 @@ const App: React.FC = () => {
 
   const handleSaveToDriveManual = () => {
     saveToHistory();
-    const content = generateReportText(service, client, payment, calculations, quoteId, true);
+    const content = generateReportText(service, client, payment, calculations, currentQuoteId, true);
     const fileName = getDynamicFileName();
     
     navigator.clipboard.writeText(content).then(() => {
@@ -337,12 +370,12 @@ const App: React.FC = () => {
   };
 
   const handleBackup = () => {
-    const data = { service, client, payment, id: quoteId, timestamp: new Date().toISOString() };
+    const data = { service, client, payment, id: currentQuoteId, timestamp: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `ALFA_BACKUP_${quoteId}.json`;
+    link.download = `ALFA_BACKUP_${currentQuoteId}.json`;
     link.click();
   };
 
@@ -376,22 +409,30 @@ const App: React.FC = () => {
     else if (step === Step.FINAL_PREVIEW) setStep(Step.PAYMENT_SUMMARY);
   };
 
+  const deleteFromHistory = (id: string) => {
+    if (window.confirm("Sei sicuro di voler eliminare questo preventivo dall'archivio?")) {
+      const updatedHistory = quoteHistory.filter(q => q.id !== id);
+      setQuoteHistory(updatedHistory);
+      localStorage.setItem('preventivi_inviati', JSON.stringify(updatedHistory));
+      if (selectedQuote && selectedQuote.id === id) {
+        setSelectedQuote(null);
+      }
+    }
+  };
+
   const filteredHistory = useMemo(() => {
-    if (!finalSearchQuery.trim()) return quoteHistory;
-    const q = finalSearchQuery.toLowerCase();
+    if (!searchQuery.trim()) return quoteHistory;
+    const q = searchQuery.toLowerCase();
     return quoteHistory.filter(item => 
-      item.service.eventName.toLowerCase().includes(q) ||
+      item.id.toLowerCase().includes(q) ||
+      (item.service.eventName && item.service.eventName.toLowerCase().includes(q)) ||
       item.client.firstName.toLowerCase().includes(q) ||
       item.client.lastName.toLowerCase().includes(q) ||
       item.client.email.toLowerCase().includes(q) ||
       item.client.phone.includes(q) ||
       (item.client.companyName && item.client.companyName.toLowerCase().includes(q))
     );
-  }, [quoteHistory, finalSearchQuery]);
-
-  const handleSearchTrigger = () => {
-    setFinalSearchQuery(searchQuery);
-  };
+  }, [quoteHistory, searchQuery]);
 
   const handleApplyDiscountToSelected = () => {
     if (!selectedQuote) return;
@@ -412,13 +453,10 @@ const App: React.FC = () => {
     };
     setSelectedQuote(updated);
     
+    // Aggiorna anche nel log se si desidera persistere
     const updatedHistory = quoteHistory.map(q => q.id === updated.id ? updated : q);
     setQuoteHistory(updatedHistory);
-    fetch(`/api/quotes/${updated.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discount: perc, calculations: updated.calculations, total: updated.total }),
-    }).catch(e => console.error("Errore aggiornamento sconto", e));
+    localStorage.setItem('preventivi_inviati', JSON.stringify(updatedHistory));
     
     alert(`Sconto del ${perc}% applicato con successo.`);
   };
@@ -448,6 +486,7 @@ const App: React.FC = () => {
     setPayment(q.payment);
     setAppliedDiscount(q.calculations.discountPercent || 0);
     setDiscountInput((q.calculations.discountPercent || 0).toString());
+    setCurrentQuoteId(q.id);
     setSelectedQuote(null);
     setIsSearchOpen(false);
     setStep(Step.FINAL_PREVIEW);
@@ -578,7 +617,7 @@ const App: React.FC = () => {
               </div>
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-right">
                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Codice ID</p>
-                <p className="text-[12px] font-bold text-[#1e40af]">{quoteId}</p>
+                <p className="text-[12px] font-bold text-[#1e40af]">{currentQuoteId}</p>
               </div>
            </div>
 
@@ -721,7 +760,7 @@ const App: React.FC = () => {
               )}
               
               {step === Step.FINAL_PREVIEW && (
-                <button onClick={() => handleInteraction(() => { setAppliedDiscount(0); setDiscountInput('0'); setStep(Step.SERVICE_DETAILS); })} className="w-full text-center text-[11px] font-black text-white/30 uppercase tracking-[0.4em] py-4 hover:text-white/60 transition-colors">
+                <button onClick={() => handleInteraction(resetConfiguration)} className="w-full text-center text-[11px] font-black text-white/30 uppercase tracking-[0.4em] py-4 hover:text-white/60 transition-colors">
                   Riavvia Configurazione
                 </button>
               )}
@@ -747,27 +786,36 @@ const App: React.FC = () => {
               <button onClick={() => handleInteraction(() => setIsSearchOpen(false))} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center"><X className="w-6 h-6 text-slate-600" /></button>
             </header>
             <div className="px-8 py-6 shrink-0 bg-slate-50 border-b border-slate-100">
-              <div className="flex gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input type="text" placeholder="Evento, nome, email, telefono..." className="w-full h-16 bg-white border border-slate-200 rounded-3xl pl-14 pr-6 text-slate-800 text-lg focus:border-[#1e40af]/40 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleInteraction(handleSearchTrigger)} autoFocus />
-                </div>
-                <button onClick={() => handleInteraction(handleSearchTrigger)} className="px-8 rounded-3xl bg-emerald-500 font-black uppercase text-xs text-white tracking-widest hover:brightness-110 active:scale-95">Trova</button>
+              <div className="relative">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input type="text" placeholder="Cerca per ID, evento, cliente..." className="w-full h-16 bg-white border border-slate-200 rounded-3xl pl-14 pr-6 text-slate-800 text-lg focus:border-[#1e40af]/40 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoFocus />
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scrollbar bg-white">
               {filteredHistory.length > 0 ? filteredHistory.map((quote) => (
-                <button key={quote.id} onClick={() => handleInteraction(() => setSelectedQuote(quote))} className="w-full p-6 rounded-[2rem] bg-slate-50 border border-slate-100 hover:border-[#1e40af]/30 transition-all flex items-center justify-between text-left group">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black text-[#1e40af] uppercase">{quote.id}</span>
-                      <span className="text-[10px] text-slate-400 font-bold">{new Date(quote.timestamp).toLocaleDateString('it-IT')}</span>
+                <div key={quote.id} className="group relative">
+                  <button onClick={() => handleInteraction(() => setSelectedQuote(quote))} className="w-full p-6 rounded-[2rem] bg-slate-50 border border-slate-100 hover:border-[#1e40af]/30 transition-all flex items-center justify-between text-left group-hover:bg-white">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-[#1e40af] uppercase">{quote.id}</span>
+                        <span className="text-[10px] text-slate-400 font-bold">{new Date(quote.timestamp).toLocaleDateString('it-IT')}</span>
+                      </div>
+                      <h3 className="text-lg font-black text-slate-800 uppercase italic leading-none">{quote.service.eventName || 'Richiesta Standard'}</h3>
+                      <p className="text-xs text-slate-500">{quote.client.firstName} {quote.client.lastName} - {quote.client.email}</p>
                     </div>
-                    <h3 className="text-lg font-black text-slate-800 uppercase italic leading-none">{quote.service.eventName || 'Richiesta Standard'}</h3>
-                    <p className="text-xs text-slate-500">{quote.client.firstName} {quote.client.lastName} - {quote.client.email}</p>
-                  </div>
-                  <div className="text-right"><p className="text-xl font-black blue-text-elite italic">€ {quote.total.toFixed(2)}</p></div>
-                </button>
+                    <div className="text-right pr-10"><p className="text-xl font-black blue-text-elite italic">€ {quote.total.toFixed(2)}</p></div>
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleInteraction(() => deleteFromHistory(quote.id));
+                    }}
+                    className="absolute right-6 top-1/2 -translate-y-1/2 p-3 rounded-xl bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100"
+                    title="Elimina"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               )) : <div className="h-64 flex flex-col items-center justify-center opacity-40"><History className="w-10 h-10 mb-4" /><p className="text-xs font-black uppercase">Nessun log trovato</p></div>}
             </div>
           </div>
@@ -807,9 +855,10 @@ const App: React.FC = () => {
             <footer className="p-8 border-t border-slate-100 bg-slate-50 space-y-3">
               <button onClick={() => handleInteraction(() => generateQuotePDF(selectedQuote))} className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 font-black uppercase text-[12px] text-white flex items-center justify-center gap-3 active:scale-95 shadow-md"><FileDown className="w-5 h-5" /> Crea PDF Professionale</button>
               <button onClick={() => handleInteraction(() => handleResendEmail(selectedQuote))} className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 font-black uppercase text-[12px] text-white flex items-center justify-center gap-3 shadow-md"><MailPlus className="w-5 h-5" /> Invia Nuovamente Email</button>
-              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => handleInteraction(() => handleCopyTxt(selectedQuote))} className="py-4 rounded-2xl bg-white border border-slate-200 font-black uppercase text-[10px] text-slate-500 flex items-center justify-center gap-2 shadow-sm"><Copy className="w-4 h-4" /> Copia TXT</button>
+              <div className="grid grid-cols-3 gap-3">
+                <button onClick={() => handleInteraction(() => handleCopyTxt(selectedQuote))} className="py-4 rounded-2xl bg-white border border-slate-200 font-black uppercase text-[10px] text-slate-500 flex items-center justify-center gap-2 shadow-sm"><Copy className="w-4 h-4" /> Copia</button>
                 <button onClick={() => handleInteraction(() => loadFromHistory(selectedQuote))} className="py-4 rounded-2xl bg-[#1e40af]/10 border border-[#1e40af]/20 font-black uppercase text-[10px] text-[#1e40af] flex items-center justify-center gap-2 shadow-sm"><ArrowRight className="w-4 h-4" /> Modifica</button>
+                <button onClick={() => handleInteraction(() => deleteFromHistory(selectedQuote.id))} className="py-4 rounded-2xl bg-red-50 border border-red-100 font-black uppercase text-[10px] text-red-500 flex items-center justify-center gap-2 shadow-sm"><X className="w-4 h-4" /> Elimina</button>
               </div>
             </footer>
           </div>
