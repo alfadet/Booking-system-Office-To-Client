@@ -500,15 +500,28 @@ const App: React.FC = () => {
   };
 
   const loadFromHistory = (q: any) => {
-    setService({ ...q.service });
+    // Mantieni i dati del cliente, resetta il servizio e genera nuovo ID
     setClient({ ...q.client });
     setPayment(q.payment);
-    setAppliedDiscount(q.calculations.discountPercent || 0);
-    setDiscountInput((q.calculations.discountPercent || 0).toString());
-    setCurrentQuoteId(q.id);
+    setService({
+      eventName: '',
+      date: new Date().toISOString().split('T')[0],
+      location: '',
+      startTime: '18:00',
+      endTime: '01:00',
+      securityOperators: 0,
+      fireOperators: 0,
+      hasSupervisor: false,
+      isOutsideTrento: false,
+      notes: '',
+      uniformType: 'Security'
+    });
+    setAppliedDiscount(0);
+    setDiscountInput('0');
+    setCurrentQuoteId(generateNewId());
     setSelectedQuote(null);
     setIsSearchOpen(false);
-    setStep(Step.FINAL_PREVIEW);
+    setStep(Step.SERVICE_DETAILS);
   };
 
   const renderServiceStep = () => (
