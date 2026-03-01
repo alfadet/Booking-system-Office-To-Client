@@ -754,9 +754,16 @@ const App: React.FC = () => {
                   </button>
                 </div>
               ) : (
-                <button onClick={() => handleInteraction(nextStep)} className="w-full h-24 rounded-[2.5rem] font-black uppercase tracking-[0.3em] text-[18px] flex items-center justify-center gap-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-xl active:scale-95 border-t border-white/20">
-                  PROSEGUI <ArrowRight className="w-8 h-8" />
-                </button>
+                <div className="space-y-4">
+                  <button onClick={() => handleInteraction(nextStep)} className="w-full h-24 rounded-[2.5rem] font-black uppercase tracking-[0.3em] text-[18px] flex items-center justify-center gap-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-xl active:scale-95 border-t border-white/20">
+                    PROSEGUI <ArrowRight className="w-8 h-8" />
+                  </button>
+                  {step === Step.SERVICE_DETAILS && (
+                    <button onClick={() => handleInteraction(() => setIsSearchOpen(true))} className="w-full h-16 rounded-[2rem] font-black uppercase tracking-[0.1em] text-[12px] flex items-center justify-center gap-3 bg-white/10 border border-white/20 text-white shadow-lg active:scale-95 hover:bg-white/20 transition-all">
+                      Ricerca Preventivi <Search className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
               )}
               
               {step === Step.FINAL_PREVIEW && (
